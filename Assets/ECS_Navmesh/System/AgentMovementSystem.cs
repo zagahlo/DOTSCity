@@ -1,118 +1,123 @@
-﻿using Unity.Entities;
+﻿using ECS_Navmesh.Component;
+using ECS_Navmesh.Data;
+using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-[UpdateInGroup(typeof(SimulationSystemGroup))]
-[UpdateAfter(typeof(NavMeshPathSystem))]
-public partial class AgentMovementSystem : SystemBase
+namespace ECS_Navmesh.System
 {
-    private EntityQuery m_Query;
+    [UpdateInGroup(typeof(SimulationSystemGroup))]
+    [UpdateAfter(typeof(GridPathSystem))]
+    public partial class AgentMovementSystem : SystemBase
+    {
+        private EntityQuery m_Query;
 
-    protected override void OnCreate()
-    {
-        var entityQueryDesc = new EntityQueryDesc
+        protected override void OnCreate()
         {
-            All = new ComponentType[]{ typeof(AgentObjectComponentData)}
-        };
-        
-        m_Query = GetEntityQuery(entityQueryDesc);
-    }
-    
-    protected override void OnUpdate()
-    {
-        float deltaTime = World.Time.DeltaTime;
-        
-        //Movement
-        Entities
-            .WithStoreEntityQueryInField(ref m_Query)
-            .WithBurst()
-            .ForEach((ref DynamicBuffer<QueryPointBuffer> ub,
-                ref DynamicBuffer<AgentsWaypointsBuffer> agentsWaypointsBuffers, 
-                ref AgentObjectComponentData uc,
-                ref LocalTransform trans) =>
+            var entityQueryDesc = new EntityQueryDesc
             {
-                if (math.distance(uc.fromLocation, uc.toLocation) == 0)
+                All = new ComponentType[] { typeof(AgentObjectComponentData) }
+            };
+
+            m_Query = GetEntityQuery(entityQueryDesc);
+        }
+
+        protected override void OnUpdate()
+        {
+            float deltaTime = World.Time.DeltaTime;
+
+            //Movement
+            Entities
+                .WithStoreEntityQueryInField(ref m_Query)
+                .WithBurst()
+                .ForEach((ref DynamicBuffer<QueryPointBuffer> ub,
+                    ref DynamicBuffer<AgentsWaypointsBuffer> agentsWaypointsBuffers,
+                    ref AgentObjectComponentData uc,
+                    ref LocalTransform trans) =>
                 {
-                    foreach (var agentsWaypointsBuffer in agentsWaypointsBuffers)
+                    if (math.distance(uc.fromLocation, uc.toLocation) == 0)
                     {
-                        if (math.distance(uc.fromLocation, agentsWaypointsBuffer.agentWaypoint) > 0)
+                        foreach (var agentsWaypointsBuffer in agentsWaypointsBuffers)
                         {
-                            uc.toLocation = agentsWaypointsBuffer.agentWaypoint;
-                            uc.waypointsBufferIndex++;
-                            break;
+                            if (math.distance(uc.fromLocation, agentsWaypointsBuffer.agentWaypoint) > 0)
+                            {
+                                uc.toLocation = agentsWaypointsBuffer.agentWaypoint;
+                                uc.waypointsBufferIndex++;
+                                break;
+                            }
                         }
                     }
-                }
-                else
-                {
-                    if (ub.Length < 1 && uc.ignoreObstacles)
+                    else
                     {
-                        ub.Add(new QueryPointBuffer { wayPoints = uc.toLocation });
-                    }
-                }
-                
-                if (ub.Length > 0)
-                {
-                    //uc.waypointDirection = math.normalize(ub[uc.queryPointBufferIndex].wayPoints - trans.Position);
-                    
-                    float3 to = ub[uc.queryPointBufferIndex].wayPoints;
-                    float3 d = to - trans.Position;
-                    if (math.lengthsq(d) > 1e-6f)
-                        uc.waypointDirection = math.normalize(d);
-
-                    
-                    trans.Position += uc.waypointDirection * uc.speed * deltaTime;
-
-                    if (math.distance(trans.Position, ub[uc.queryPointBufferIndex].wayPoints) <= uc.minDistanceReached &&
-                        uc.queryPointBufferIndex < ub.Length - 1)
-                    {
-                        uc.queryPointBufferIndex++;
-                    }
-
-                    if (math.distance(trans.Position, uc.toLocation) <= uc.minDistanceReached)
-                    {
-                        uc.fromLocation = trans.Position;
-
-                        if (!uc.reversing && uc.waypointsBufferIndex < agentsWaypointsBuffers.Length - 1)
+                        if (ub.Length < 1 && uc.ignoreObstacles)
                         {
-                            uc.waypointsBufferIndex++;
+                            ub.Add(new QueryPointBuffer { wayPoints = uc.toLocation });
+                        }
+                    }
 
-                            if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
+                    if (ub.Length > 0)
+                    {
+                        uc.queryPointBufferIndex = math.clamp(uc.queryPointBufferIndex, 0, ub.Length - 1);
+                        
+                        float3 d = ub[uc.queryPointBufferIndex].wayPoints - trans.Position;
+                        if (math.lengthsq(d) > 1e-6f)
+                            uc.waypointDirection = math.normalize(d);
+
+
+                        trans.Position += uc.waypointDirection * uc.speed * deltaTime;
+
+                        if (math.distance(trans.Position, ub[uc.queryPointBufferIndex].wayPoints) <=
+                            uc.minDistanceReached &&
+                            uc.queryPointBufferIndex < ub.Length - 1)
+                        {
+                            uc.queryPointBufferIndex++;
+                        }
+
+                        if (math.distance(trans.Position, uc.toLocation) <= uc.minDistanceReached)
+                        {
+                            uc.fromLocation = trans.Position;
+
+                            if (!uc.reversing && uc.waypointsBufferIndex < agentsWaypointsBuffers.Length - 1)
                             {
-                                if(uc.reverseAtEnd) uc.reversing = true;
+                                uc.waypointsBufferIndex++;
+
+                                if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
+                                {
+                                    if (uc.reverseAtEnd) uc.reversing = true;
+                                }
+
+                            }
+                            else if (uc.reversing && uc.waypointsBufferIndex > 0)
+                            {
+                                uc.waypointsBufferIndex--;
+
+                                if (uc.waypointsBufferIndex == 0)
+                                    uc.reversing = false;
+                            }
+                            else if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
+                            {
+                                uc.waypointsBufferIndex = 0;
                             }
 
-                        }
-                        else if (uc.reversing && uc.waypointsBufferIndex > 0)
-                        {
-                            uc.waypointsBufferIndex--;
-
-                            if (uc.waypointsBufferIndex == 0)
-                                uc.reversing = false;
-                        }
-                        else if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
-                        {
-                            uc.waypointsBufferIndex = 0;
+                            uc.toLocation = agentsWaypointsBuffers[uc.waypointsBufferIndex].agentWaypoint;
+                            uc.queryPointBufferIndex = 0;
+                            ub.Clear();
                         }
 
-                        uc.toLocation = agentsWaypointsBuffers[uc.waypointsBufferIndex].agentWaypoint;
-                        uc.queryPointBufferIndex = 0;
-                        ub.Clear();
+                        trans.Rotation = math.slerp(trans.Rotation,
+                            quaternion.LookRotationSafe(uc.waypointDirection, Vector3.up),
+                            uc.rotationSpeed * deltaTime);
+
                     }
-                    
-                    trans.Rotation = math.slerp(trans.Rotation, 
-                                                quaternion.LookRotationSafe(uc.waypointDirection, Vector3.up),
-                                                uc.rotationSpeed * deltaTime);
 
-                }
+                }).ScheduleParallel();
+        }
 
-            }).ScheduleParallel();
-    }
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
 
-    protected override void OnDestroy()
-    {
-        base.OnDestroy();
-
+        }
     }
 }

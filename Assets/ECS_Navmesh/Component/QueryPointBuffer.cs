@@ -1,7 +1,10 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
 
-public struct QueryPointBuffer : IBufferElementData
+namespace ECS_Navmesh.Component
 {
-    public float3 wayPoints;
+    public struct QueryPointBuffer : IBufferElementData
+    {
+        public float3 wayPoints;
+    }
 }

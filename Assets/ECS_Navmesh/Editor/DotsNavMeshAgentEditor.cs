@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ECS_Navmesh.MonoBehavior;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
