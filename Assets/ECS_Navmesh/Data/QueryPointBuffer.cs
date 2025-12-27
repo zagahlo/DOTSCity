@@ -1,7 +1,7 @@
 ﻿using Unity.Entities;
 using Unity.Mathematics;
 
-namespace ECS_Navmesh.Component
+namespace ECS_Navmesh.Data
 {
     public struct QueryPointBuffer : IBufferElementData
     {

@@ -19,17 +19,20 @@ namespace ECS_Navmesh.System
 
         protected override void OnCreate()
         {
+            base.OnCreate();
             RequireForUpdate<GridSettings>();
+        }
+
+        protected override void OnStartRunning()
+        {
+            base.OnStartRunning();
+            _gridEntity = SystemAPI.GetSingletonEntity<GridSettings>();
+            _grid = SystemAPI.GetSingleton<GridSettings>();
+            _cells = EntityManager.GetBuffer<GridCell>(_gridEntity);
         }
 
         protected override void OnUpdate()
         {
-            // Asumimos 1 grid singleton (lo normal en citybuilders)
-            _gridEntity = SystemAPI.GetSingletonEntity<GridSettings>();
-            _grid = SystemAPI.GetSingleton<GridSettings>();
-            _cells = EntityManager.GetBuffer<GridCell>(_gridEntity);
-
-            // Procesa agentes que necesitan path
             Entities
                 .WithoutBurst()
                 .ForEach((ref DynamicBuffer<QueryPointBuffer> ub,
@@ -62,7 +65,7 @@ namespace ECS_Navmesh.System
 
         private static int Heuristic(int2 a, int2 b)
         {
-            // Manhattan
+            // Manhattan distance
             int2 d = math.abs(a - b);
             return d.x + d.y;
         }

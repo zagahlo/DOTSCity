@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using ECS_Navmesh.Component;
 using ECS_Navmesh.Data;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Transforms;
 using Random = UnityEngine.Random;
 
-namespace ECS_Navmesh.MonoBehavior
+namespace ECS_Navmesh.Component
 {
     public class DotsNavMeshAgent : MonoBehaviour
     {
@@ -16,25 +15,25 @@ namespace ECS_Navmesh.MonoBehavior
         public bool reverseAtEnd;
         public bool ignoreObstacles;
 
-        private Entity entity;
-        private EntityManager entityManager;
-        private Vector3 gizmoInitPosition;
-        private bool initialized;
+        private Entity _entity;
+        private EntityManager _entityManager;
+        private Vector3 _gizmoInitPosition;
+        private bool _initialized;
 
         private void Awake()
         {
             waypointsEditorContainer = null;
 
-            entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
-            entity = entityManager.CreateEntity();
+            _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
+            _entity = _entityManager.CreateEntity();
 #if UNITY_EDITOR
-            entityManager.SetName(entity, "Pedestrian_" + transform.position.x + "x" + transform.position.z);
+            _entityManager.SetName(_entity, "Pedestrian_" + transform.position.x + "x" + transform.position.z);
 #endif
         }
 
         private void OnEnable()
         {
-            if (entity != Entity.Null && !initialized)
+            if (_entity != Entity.Null && !_initialized)
             {
                 InitComponentData();
             }
@@ -43,17 +42,17 @@ namespace ECS_Navmesh.MonoBehavior
         private void Start()
         {
 #if UNITY_EDITOR
-            gizmoInitPosition = transform.position;
+            _gizmoInitPosition = transform.position;
 #endif
         }
 
         private void Update()
         {
-            if (entity != Entity.Null && initialized)
+            if (_entity != Entity.Null && _initialized)
             {
                 transform.SetPositionAndRotation(
-                    entityManager.GetComponentData<LocalTransform>(entity).Position,
-                    entityManager.GetComponentData<LocalTransform>(entity).Rotation);
+                    _entityManager.GetComponentData<LocalTransform>(_entity).Position,
+                    _entityManager.GetComponentData<LocalTransform>(_entity).Rotation);
             }
         }
 
@@ -67,7 +66,7 @@ namespace ECS_Navmesh.MonoBehavior
                 return;
             }
             
-            entityManager.AddComponentData(entity, new AgentObjectComponentData
+            _entityManager.AddComponentData(_entity, new AgentObjectComponentData
             {
                 fromLocation = transform.position,
                 toLocation = waypoints![0],
@@ -83,17 +82,17 @@ namespace ECS_Navmesh.MonoBehavior
                 ignoreObstacles = ignoreObstacles
             });
 
-            var agentWaypointsBuffer = entityManager.AddBuffer<AgentsWaypointsBuffer>(entity);
+            var agentWaypointsBuffer = _entityManager.AddBuffer<AgentsWaypointsBuffer>(_entity);
             
             for (int i = 0; i < waypointsCount; i++)
             {
                 agentWaypointsBuffer.Add(new AgentsWaypointsBuffer { agentWaypoint = waypoints[i] });
             }
 
-            entityManager.AddBuffer<QueryPointBuffer>(entity);
-            entityManager.AddComponentData(entity, LocalTransform.FromPositionRotation(transform.position, transform.rotation));
+            _entityManager.AddBuffer<QueryPointBuffer>(_entity);
+            _entityManager.AddComponentData(_entity, LocalTransform.FromPositionRotation(transform.position, transform.rotation));
 
-            initialized = true;
+            _initialized = true;
         }
 
 
@@ -123,12 +122,12 @@ namespace ECS_Navmesh.MonoBehavior
                 if (Application.isPlaying)
                 {
                     Gizmos.color = Color.cyan;
-                    Gizmos.DrawSphere(gizmoInitPosition, .3f);
+                    Gizmos.DrawSphere(_gizmoInitPosition, .3f);
                     Gizmos.color = Color.green;
-                    Gizmos.DrawLine(gizmoInitPosition, waypoints[0]);
+                    Gizmos.DrawLine(_gizmoInitPosition, waypoints[0]);
 
                     if (!reverseAtEnd)
-                        Gizmos.DrawLine(waypoints[waypoints.Count - 1], gizmoInitPosition);
+                        Gizmos.DrawLine(waypoints[waypoints.Count - 1], _gizmoInitPosition);
                 }
                 else
                 {

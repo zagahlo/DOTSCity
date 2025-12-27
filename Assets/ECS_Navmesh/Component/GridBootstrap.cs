@@ -3,7 +3,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace ECS_Navmesh.MonoBehavior
+namespace ECS_Navmesh.Component
 {
     public class GridBootstrap : MonoBehaviour
     {
