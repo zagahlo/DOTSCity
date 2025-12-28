@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.Mathematics;
 
-namespace ECS_Navmesh.Data
+namespace ECS_Navmesh.System
 {
     public struct AgentsWaypointsBuffer : IBufferElementData
     {

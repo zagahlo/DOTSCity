@@ -3,6 +3,7 @@ using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
+using UnityEngine;
 
 namespace ECS_Navmesh.System
 {
@@ -58,6 +59,7 @@ namespace ECS_Navmesh.System
                         {
                             agentData.toLocation = nextWp;
                             agentData.waypointsBufferIndex++;
+                            LogConsole(agentData, $"waypointsBufferIndex++ {agentData.waypointsBufferIndex}");
                             break;
                         }
                     }
@@ -66,18 +68,19 @@ namespace ECS_Navmesh.System
                 //  check query point buffer waypoints
                 if (qpb.Length < 1)
                 {
-                    qpb.Add(new QueryPointBuffer { wayPoints = agentData.toLocation });
+                    // if empty, add the next one
+                    qpb.Add(new QueryPointBuffer { queryWaypoint = agentData.toLocation });
                 }
                 else
                 {
                     agentData.queryPointBufferIndex = math.clamp(agentData.queryPointBufferIndex, 0, qpb.Length - 1);
                     
-                    var d = qpb[agentData.queryPointBufferIndex].wayPoints - trans.Position;
+                    var d = qpb[agentData.queryPointBufferIndex].queryWaypoint - trans.Position;
                     agentData.waypointDirection = math.lengthsq(d) > 0.00001f ? math.normalize(d) : d;
                     
                     trans.Position += agentData.waypointDirection * agentData.speed * DeltaTime;
 
-                    if (math.distance(trans.Position, qpb[agentData.queryPointBufferIndex].wayPoints) <= agentData.minDistanceReached &&
+                    if (math.distance(trans.Position, qpb[agentData.queryPointBufferIndex].queryWaypoint) <= agentData.minDistanceReached &&
                         agentData.queryPointBufferIndex < qpb.Length - 1)
                     {
                         agentData.queryPointBufferIndex++;
@@ -88,6 +91,7 @@ namespace ECS_Navmesh.System
                         if (!agentData.reversing && agentData.waypointsBufferIndex < awb.Length - 1)
                         {
                             agentData.waypointsBufferIndex++;
+                            LogConsole(agentData, $"waypointsBufferIndex++ {agentData.waypointsBufferIndex}");
 
                             if (agentData.waypointsBufferIndex == awb.Length - 1)
                             {
@@ -99,6 +103,7 @@ namespace ECS_Navmesh.System
                         else if (agentData.reversing && agentData.waypointsBufferIndex > 0)
                         {
                             agentData.waypointsBufferIndex--;
+                            LogConsole(agentData, $"waypointsBufferIndex-- {agentData.waypointsBufferIndex}");
 
                             if (agentData.waypointsBufferIndex == 0)
                                 agentData.reversing = false;
@@ -106,6 +111,7 @@ namespace ECS_Navmesh.System
                         else if (agentData.waypointsBufferIndex == awb.Length - 1)
                         {
                             agentData.waypointsBufferIndex = 0;
+                            LogConsole(agentData, $"waypointsBufferIndex set 0");
                         }
 
                         agentData.toLocation = awb[agentData.waypointsBufferIndex].agentWaypoint;
@@ -119,6 +125,12 @@ namespace ECS_Navmesh.System
 
                 }
             }
+        }
+
+        private static void LogConsole(AgentObjectComponentData agentData, string message)
+        {
+            if(agentData.logger)
+                Debug.Log(message);
         }
     }
 }

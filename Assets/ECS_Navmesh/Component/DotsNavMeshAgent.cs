@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ECS_Navmesh.Data;
+using ECS_Navmesh.System;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Transforms;
@@ -11,9 +12,12 @@ namespace ECS_Navmesh.Component
     {
         public Transform waypointsEditorContainer;
         public List<Vector3> waypoints;
-        [Space(5f)] public AgentConfiguration agentConfiguration;
+        [Space(5f)]
+        public AgentConfiguration agentConfiguration;
         public bool reverseAtEnd;
-
+        [Space(5f)]
+        public bool logger;
+        
         private Entity _entity;
         private EntityManager _entityManager;
         private Vector3 _gizmoInitPosition;
@@ -72,20 +76,27 @@ namespace ECS_Navmesh.Component
                 rotationSpeed = agentConfiguration.rotationSpeed,
                 minDistanceReached = agentConfiguration.minDistanceReached,
                 queryPointBufferIndex = 0,
-                waypointsBufferIndex = 0,
+                waypointsBufferIndex = 1,
                 maxIteration = agentConfiguration.maxIteration,
                 maxPathSize = agentConfiguration.maxPathSize,
                 pathNodeSize = agentConfiguration.pathNodeSize,
-                reverseAtEnd = reverseAtEnd
+                reverseAtEnd = reverseAtEnd,
+                logger = logger
             });
 
             _entityManager.AddComponentData(_entity, LocalTransform.FromPositionRotation(transform.position, transform.rotation));
             
             var agentWaypointsBuffer = _entityManager.AddBuffer<AgentsWaypointsBuffer>(_entity);
-            agentWaypointsBuffer.Add(new AgentsWaypointsBuffer { agentWaypoint = _entityManager.GetComponentData<LocalTransform>(_entity).Position });
-            for (int i = 0; i < waypointsCount; i++)
+            agentWaypointsBuffer.Add(new AgentsWaypointsBuffer
             {
-                agentWaypointsBuffer.Add(new AgentsWaypointsBuffer { agentWaypoint = waypoints[i] });
+                agentWaypoint = _entityManager.GetComponentData<LocalTransform>(_entity).Position
+            });
+            for (var i = 0; i < waypointsCount; i++)
+            {
+                agentWaypointsBuffer.Add(new AgentsWaypointsBuffer
+                {
+                    agentWaypoint = waypoints[i]
+                });
             }
 
             _entityManager.AddBuffer<QueryPointBuffer>(_entity);
