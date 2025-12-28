@@ -6,7 +6,6 @@ namespace ECS_Navmesh.Data
 {
     public struct AgentObjectComponentData : IComponentData
     {
-        public float3 fromLocation;
         public float3 toLocation;
         public bool reverseAtEnd;
 

@@ -64,10 +64,9 @@ namespace ECS_Navmesh.Component
                 enabled = false;
                 return;
             }
-            
+
             _entityManager.AddComponentData(_entity, new AgentObjectComponentData
             {
-                fromLocation = transform.position,
                 toLocation = waypoints![0],
                 speed = Random.Range(agentConfiguration.minSpeed, agentConfiguration.maxSpeed),
                 rotationSpeed = agentConfiguration.rotationSpeed,

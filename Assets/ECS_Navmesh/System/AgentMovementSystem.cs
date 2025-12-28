@@ -1,4 +1,5 @@
 ﻿using ECS_Navmesh.Data;
+using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
@@ -8,111 +9,116 @@ namespace ECS_Navmesh.System
     public partial class AgentMovementSystem : SystemBase
     {
         private EntityQuery _mQuery;
-        private const float CloseZero = 1e-6f;
 
         protected override void OnCreate()
         {
-            var entityQueryDesc = new EntityQueryDesc
+            // Query explícita: solo entidades que tengan TODO lo que el job necesita
+            _mQuery = GetEntityQuery(new EntityQueryDesc
             {
-                All = new ComponentType[] { typeof(AgentObjectComponentData) }
-            };
-
-            _mQuery = GetEntityQuery(entityQueryDesc);
+                All = new[]
+                {
+                    ComponentType.ReadWrite<AgentObjectComponentData>(),
+                    ComponentType.ReadWrite<LocalTransform>(),
+                    ComponentType.ReadWrite<QueryPointBuffer>(),
+                    ComponentType.ReadWrite<AgentsWaypointsBuffer>(),
+                }
+            });
         }
 
         protected override void OnUpdate()
         {
-            float deltaTime = World.Time.DeltaTime;
+            var job = new AgentMovementJob
+            {
+                DeltaTime = SystemAPI.Time.DeltaTime
+            };
 
-            //Movement
-            Entities
-                .WithStoreEntityQueryInField(ref _mQuery)
-                .WithBurst()
-                .ForEach((ref DynamicBuffer<QueryPointBuffer> ub,
-                    ref DynamicBuffer<AgentsWaypointsBuffer> agentsWaypointsBuffers,
-                    ref AgentObjectComponentData uc,
-                    ref LocalTransform trans) =>
-                {
-                    if (math.abs(math.distance(uc.fromLocation, uc.toLocation)) <= CloseZero)
-                    {
-                        foreach (var agentsWaypointsBuffer in agentsWaypointsBuffers)
-                        {
-                            if (math.abs(math.distance(uc.fromLocation, agentsWaypointsBuffer.agentWaypoint)) > uc.minDistanceReached)
-                            {
-                                uc.toLocation = agentsWaypointsBuffer.agentWaypoint;
-                                uc.waypointsBufferIndex++;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (ub.Length < 1)
-                        {
-                            ub.Add(new QueryPointBuffer { wayPoints = uc.toLocation });
-                        }
-                    }
-
-                    if (ub.Length > 0)
-                    {
-                        uc.queryPointBufferIndex = math.clamp(uc.queryPointBufferIndex, 0, ub.Length - 1);
-                        
-                        var d = ub[uc.queryPointBufferIndex].wayPoints - trans.Position;
-                        if (math.lengthsq(d) > CloseZero)
-                            uc.waypointDirection = math.normalize(d);
-                        
-                        trans.Position += uc.waypointDirection * uc.speed * deltaTime;
-
-                        if (math.distance(trans.Position, ub[uc.queryPointBufferIndex].wayPoints) <= uc.minDistanceReached &&
-                            uc.queryPointBufferIndex < ub.Length - 1)
-                        {
-                            uc.queryPointBufferIndex++;
-                        }
-
-                        if (math.distance(trans.Position, uc.toLocation) <= uc.minDistanceReached)
-                        {
-                            uc.fromLocation = trans.Position;
-
-                            if (!uc.reversing && uc.waypointsBufferIndex < agentsWaypointsBuffers.Length - 1)
-                            {
-                                uc.waypointsBufferIndex++;
-
-                                if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
-                                {
-                                    if (uc.reverseAtEnd) uc.reversing = true;
-                                }
-
-                            }
-                            else if (uc.reversing && uc.waypointsBufferIndex > 0)
-                            {
-                                uc.waypointsBufferIndex--;
-
-                                if (uc.waypointsBufferIndex == 0)
-                                    uc.reversing = false;
-                            }
-                            else if (uc.waypointsBufferIndex == agentsWaypointsBuffers.Length - 1)
-                            {
-                                uc.waypointsBufferIndex = 0;
-                            }
-
-                            uc.toLocation = agentsWaypointsBuffers[uc.waypointsBufferIndex].agentWaypoint;
-                            uc.queryPointBufferIndex = 0;
-                            ub.Clear();
-                        }
-
-                        trans.Rotation = math.slerp(trans.Rotation,
-                            quaternion.LookRotationSafe(uc.waypointDirection, math.up()),
-                            uc.rotationSpeed * deltaTime);
-
-                    }
-
-                }).ScheduleParallel();
+            // Parallel + Burst
+            Dependency = job.ScheduleParallel(_mQuery,Dependency);
         }
-
-        protected override void OnDestroy()
+        
+        [BurstCompile]
+        public partial struct AgentMovementJob : IJobEntity
         {
-            base.OnDestroy();
+            public float DeltaTime;
 
+            void Execute(
+                DynamicBuffer<QueryPointBuffer> qpb,
+                DynamicBuffer<AgentsWaypointsBuffer> awb,
+                ref AgentObjectComponentData agentData,
+                ref LocalTransform trans)
+            {
+                // if the agent currentPosition - toLocation are less than min configured, pick the next location point from the agent waypoints buffer
+                if (math.distance(trans.Position, agentData.toLocation) < agentData.minDistanceReached)
+                {
+                    for (var i = 0; i < awb.Length; i++)
+                    {
+                        var nextWp = awb[i].agentWaypoint;
+                        // set the next waypoint if the distance from the current one is greater than min configured
+                        if (math.distance(trans.Position, nextWp) > agentData.minDistanceReached)
+                        {
+                            agentData.toLocation = nextWp;
+                            agentData.waypointsBufferIndex++;
+                            break;
+                        }
+                    }
+                }
+                
+                //  check query point buffer waypoints
+                if (qpb.Length < 1)
+                {
+                    qpb.Add(new QueryPointBuffer { wayPoints = agentData.toLocation });
+                }
+                else
+                {
+                    agentData.queryPointBufferIndex = math.clamp(agentData.queryPointBufferIndex, 0, qpb.Length - 1);
+                    
+                    var d = qpb[agentData.queryPointBufferIndex].wayPoints - trans.Position;
+                    agentData.waypointDirection = math.lengthsq(d) > 0.00001f ? math.normalize(d) : d;
+                    
+                    trans.Position += agentData.waypointDirection * agentData.speed * DeltaTime;
+
+                    if (math.distance(trans.Position, qpb[agentData.queryPointBufferIndex].wayPoints) <= agentData.minDistanceReached &&
+                        agentData.queryPointBufferIndex < qpb.Length - 1)
+                    {
+                        agentData.queryPointBufferIndex++;
+                    }
+
+                    if (math.distance(trans.Position, agentData.toLocation) <= agentData.minDistanceReached)
+                    {
+                        if (!agentData.reversing && agentData.waypointsBufferIndex < awb.Length - 1)
+                        {
+                            agentData.waypointsBufferIndex++;
+
+                            if (agentData.waypointsBufferIndex == awb.Length - 1)
+                            {
+                                if (agentData.reverseAtEnd)
+                                    agentData.reversing = true;
+                            }
+
+                        }
+                        else if (agentData.reversing && agentData.waypointsBufferIndex > 0)
+                        {
+                            agentData.waypointsBufferIndex--;
+
+                            if (agentData.waypointsBufferIndex == 0)
+                                agentData.reversing = false;
+                        }
+                        else if (agentData.waypointsBufferIndex == awb.Length - 1)
+                        {
+                            agentData.waypointsBufferIndex = 0;
+                        }
+
+                        agentData.toLocation = awb[agentData.waypointsBufferIndex].agentWaypoint;
+                        agentData.queryPointBufferIndex = 0;
+                        qpb.Clear();
+                    }
+
+                    trans.Rotation = math.slerp(trans.Rotation,
+                        quaternion.LookRotationSafe(agentData.waypointDirection, math.up()),
+                        agentData.rotationSpeed * DeltaTime);
+
+                }
+            }
         }
     }
 }
