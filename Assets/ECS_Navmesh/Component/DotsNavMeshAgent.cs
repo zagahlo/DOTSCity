@@ -13,7 +13,6 @@ namespace ECS_Navmesh.Component
         public List<Vector3> waypoints;
         [Space(5f)] public AgentConfiguration agentConfiguration;
         public bool reverseAtEnd;
-        public bool ignoreObstacles;
 
         private Entity _entity;
         private EntityManager _entityManager;
@@ -78,19 +77,19 @@ namespace ECS_Navmesh.Component
                 maxIteration = agentConfiguration.maxIteration,
                 maxPathSize = agentConfiguration.maxPathSize,
                 pathNodeSize = agentConfiguration.pathNodeSize,
-                reverseAtEnd = reverseAtEnd,
-                ignoreObstacles = ignoreObstacles
+                reverseAtEnd = reverseAtEnd
             });
 
-            var agentWaypointsBuffer = _entityManager.AddBuffer<AgentsWaypointsBuffer>(_entity);
+            _entityManager.AddComponentData(_entity, LocalTransform.FromPositionRotation(transform.position, transform.rotation));
             
+            var agentWaypointsBuffer = _entityManager.AddBuffer<AgentsWaypointsBuffer>(_entity);
+            agentWaypointsBuffer.Add(new AgentsWaypointsBuffer { agentWaypoint = _entityManager.GetComponentData<LocalTransform>(_entity).Position });
             for (int i = 0; i < waypointsCount; i++)
             {
                 agentWaypointsBuffer.Add(new AgentsWaypointsBuffer { agentWaypoint = waypoints[i] });
             }
 
             _entityManager.AddBuffer<QueryPointBuffer>(_entity);
-            _entityManager.AddComponentData(_entity, LocalTransform.FromPositionRotation(transform.position, transform.rotation));
 
             _initialized = true;
         }

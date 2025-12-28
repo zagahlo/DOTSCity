@@ -8,7 +8,6 @@ namespace ECS_Navmesh.Data
     {
         public float3 fromLocation;
         public float3 toLocation;
-        public bool ignoreObstacles;
         public bool reverseAtEnd;
 
         public bool reversing;

@@ -1,17 +1,14 @@
-﻿using ECS_Navmesh.Component;
-using ECS_Navmesh.Data;
+﻿using ECS_Navmesh.Data;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
-using UnityEngine;
 
 namespace ECS_Navmesh.System
 {
-    [UpdateInGroup(typeof(SimulationSystemGroup))]
-    [UpdateAfter(typeof(GridPathSystem))]
     public partial class AgentMovementSystem : SystemBase
     {
-        private EntityQuery m_Query;
+        private EntityQuery _mQuery;
+        private const float CloseZero = 1e-6f;
 
         protected override void OnCreate()
         {
@@ -20,7 +17,7 @@ namespace ECS_Navmesh.System
                 All = new ComponentType[] { typeof(AgentObjectComponentData) }
             };
 
-            m_Query = GetEntityQuery(entityQueryDesc);
+            _mQuery = GetEntityQuery(entityQueryDesc);
         }
 
         protected override void OnUpdate()
@@ -29,18 +26,18 @@ namespace ECS_Navmesh.System
 
             //Movement
             Entities
-                .WithStoreEntityQueryInField(ref m_Query)
+                .WithStoreEntityQueryInField(ref _mQuery)
                 .WithBurst()
                 .ForEach((ref DynamicBuffer<QueryPointBuffer> ub,
                     ref DynamicBuffer<AgentsWaypointsBuffer> agentsWaypointsBuffers,
                     ref AgentObjectComponentData uc,
                     ref LocalTransform trans) =>
                 {
-                    if (math.distance(uc.fromLocation, uc.toLocation) == 0)
+                    if (math.abs(math.distance(uc.fromLocation, uc.toLocation)) <= CloseZero)
                     {
                         foreach (var agentsWaypointsBuffer in agentsWaypointsBuffers)
                         {
-                            if (math.distance(uc.fromLocation, agentsWaypointsBuffer.agentWaypoint) > 0)
+                            if (math.abs(math.distance(uc.fromLocation, agentsWaypointsBuffer.agentWaypoint)) > uc.minDistanceReached)
                             {
                                 uc.toLocation = agentsWaypointsBuffer.agentWaypoint;
                                 uc.waypointsBufferIndex++;
@@ -50,7 +47,7 @@ namespace ECS_Navmesh.System
                     }
                     else
                     {
-                        if (ub.Length < 1 && uc.ignoreObstacles)
+                        if (ub.Length < 1)
                         {
                             ub.Add(new QueryPointBuffer { wayPoints = uc.toLocation });
                         }
@@ -60,15 +57,13 @@ namespace ECS_Navmesh.System
                     {
                         uc.queryPointBufferIndex = math.clamp(uc.queryPointBufferIndex, 0, ub.Length - 1);
                         
-                        float3 d = ub[uc.queryPointBufferIndex].wayPoints - trans.Position;
-                        if (math.lengthsq(d) > 1e-6f)
+                        var d = ub[uc.queryPointBufferIndex].wayPoints - trans.Position;
+                        if (math.lengthsq(d) > CloseZero)
                             uc.waypointDirection = math.normalize(d);
-
-
+                        
                         trans.Position += uc.waypointDirection * uc.speed * deltaTime;
 
-                        if (math.distance(trans.Position, ub[uc.queryPointBufferIndex].wayPoints) <=
-                            uc.minDistanceReached &&
+                        if (math.distance(trans.Position, ub[uc.queryPointBufferIndex].wayPoints) <= uc.minDistanceReached &&
                             uc.queryPointBufferIndex < ub.Length - 1)
                         {
                             uc.queryPointBufferIndex++;
@@ -106,7 +101,7 @@ namespace ECS_Navmesh.System
                         }
 
                         trans.Rotation = math.slerp(trans.Rotation,
-                            quaternion.LookRotationSafe(uc.waypointDirection, Vector3.up),
+                            quaternion.LookRotationSafe(uc.waypointDirection, math.up()),
                             uc.rotationSpeed * deltaTime);
 
                     }
