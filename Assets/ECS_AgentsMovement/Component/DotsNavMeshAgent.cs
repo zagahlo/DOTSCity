@@ -1,13 +1,11 @@
-using System;
 using System.Collections.Generic;
-using ECS_Navmesh.Data;
-using ECS_Navmesh.System;
+using ECS_AgentsMovement.Data;
+using ECS_AgentsMovement.System;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Transforms;
-using Random = UnityEngine.Random;
 
-namespace ECS_Navmesh.Component
+namespace ECS_AgentsMovement.Component
 {
     public class DotsNavMeshAgent : MonoBehaviour
     {
@@ -72,8 +70,7 @@ namespace ECS_Navmesh.Component
 
             _entityManager.AddComponentData(_entity, new AgentObjectComponentData
             {
-                toLocation = waypoints![0],
-                speed = Random.Range(agentConfiguration.minSpeed, agentConfiguration.maxSpeed),
+                movementSpeed = agentConfiguration.movementSpeed,
                 rotationSpeed = agentConfiguration.rotationSpeed,
                 minDistanceReq = agentConfiguration.minDistanceReached,
                 waypointsBufferIndex = 1,

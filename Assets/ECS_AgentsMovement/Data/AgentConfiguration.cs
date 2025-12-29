@@ -1,17 +1,12 @@
 using UnityEngine;
 
-namespace ECS_Navmesh.Data
+namespace ECS_AgentsMovement.Data
 {
     [CreateAssetMenu(menuName = "ScriptableObject/Map/NavMeshAgentConfig")]
     public class AgentConfiguration : ScriptableObject
     {
-        public float minSpeed;
-        public float maxSpeed;
+        public float movementSpeed;
         public float rotationSpeed;
         public float minDistanceReached;
-
-        public int maxIteration = 1024;
-        public int maxPathSize = 2048;
-        public int pathNodeSize = 2048;
     }
 }

@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using ECS_Navmesh.Component;
+using ECS_AgentsMovement.Component;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;

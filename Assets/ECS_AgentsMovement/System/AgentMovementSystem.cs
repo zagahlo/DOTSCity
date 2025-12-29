@@ -1,11 +1,11 @@
-﻿using ECS_Navmesh.Data;
+﻿using ECS_AgentsMovement.Component;
 using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-namespace ECS_Navmesh.System
+namespace ECS_AgentsMovement.System
 {
     public partial class AgentMovementSystem : SystemBase
     {
@@ -45,27 +45,16 @@ namespace ECS_Navmesh.System
                 ref AgentObjectComponentData agentData,
                 ref LocalTransform trans)
             {
-                // if the agent currentPosition - toLocation are less than min configured, pick the next location point from the agent waypoints buffer
-                if (math.distance(trans.Position, agentData.toLocation) < agentData.minDistanceReq)
-                {
-                    for (var i = 0; i < awb.Length; i++)
-                    {
-                        // set the next waypoint if the distance from the current one is greater than min configured
-                        if (math.distance(trans.Position, awb[i].agentWaypoint) > agentData.minDistanceReq)
-                        {
-                            agentData.waypointsBufferIndex++;
-                            LogConsole(agentData, $"waypointsBufferIndex++ {agentData.waypointsBufferIndex}");
-                            break;
-                        }
-                    }
-                }
+                // normalize vector to apply correct speed
+                var direction = awb[agentData.waypointsBufferIndex].agentWaypoint - trans.Position;
+                var normalizedDirection = math.lengthsq(direction) > 0 ? math.normalize(direction) : direction;
                 
-                var d = awb[agentData.waypointsBufferIndex].agentWaypoint - trans.Position;
-                agentData.waypointDirection = math.lengthsq(d) > 0 ? math.normalize(d) : d;
-                
-                trans.Position += agentData.waypointDirection * agentData.speed * DeltaTime;
+                // move the agent
+                trans.Position += normalizedDirection * agentData.movementSpeed * DeltaTime;
 
-                if (math.distance(trans.Position, agentData.toLocation) <= agentData.minDistanceReq)
+                LogConsole(agentData, "agentData.waypointsBufferIndex"+agentData.waypointsBufferIndex);
+                // if the distance between agent currentPosition and the nextWaypoint is less than min required configured
+                if (math.distance(trans.Position, awb[agentData.waypointsBufferIndex].agentWaypoint) <= agentData.minDistanceReq)
                 {
                     if (!agentData.reversing)
                     {
@@ -93,16 +82,14 @@ namespace ECS_Navmesh.System
                         if (agentData.waypointsBufferIndex == 0)
                             agentData.reversing = false;
                     }
-
-                    agentData.toLocation = awb[agentData.waypointsBufferIndex].agentWaypoint;
                 }
 
                 trans.Rotation = math.slerp(trans.Rotation,
-                    quaternion.LookRotationSafe(agentData.waypointDirection, math.up()),
+                    quaternion.LookRotationSafe(normalizedDirection, math.up()),
                     agentData.rotationSpeed * DeltaTime);
             }
         }
-
+        
         private static void LogConsole(AgentObjectComponentData agentData, string message)
         {
             if(agentData.logger)
