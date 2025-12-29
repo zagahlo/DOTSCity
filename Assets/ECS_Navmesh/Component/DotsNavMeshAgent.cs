@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ECS_Navmesh.Data;
 using ECS_Navmesh.System;
@@ -74,12 +75,8 @@ namespace ECS_Navmesh.Component
                 toLocation = waypoints![0],
                 speed = Random.Range(agentConfiguration.minSpeed, agentConfiguration.maxSpeed),
                 rotationSpeed = agentConfiguration.rotationSpeed,
-                minDistanceReached = agentConfiguration.minDistanceReached,
-                queryPointBufferIndex = 0,
+                minDistanceReq = agentConfiguration.minDistanceReached,
                 waypointsBufferIndex = 1,
-                maxIteration = agentConfiguration.maxIteration,
-                maxPathSize = agentConfiguration.maxPathSize,
-                pathNodeSize = agentConfiguration.pathNodeSize,
                 reverseAtEnd = reverseAtEnd,
                 logger = logger
             });
@@ -98,8 +95,6 @@ namespace ECS_Navmesh.Component
                     agentWaypoint = waypoints[i]
                 });
             }
-
-            _entityManager.AddBuffer<QueryPointBuffer>(_entity);
 
             _initialized = true;
         }

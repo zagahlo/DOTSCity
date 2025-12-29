@@ -16,22 +16,7 @@ namespace ECS_Navmesh.Data
         public float3 waypointDirection;
         public float speed;
         public float rotationSpeed;
-        public float minDistanceReached;
+        public float minDistanceReq;
         public int waypointsBufferIndex;
-        public int queryPointBufferIndex;
-
-        public int maxIteration;
-        public int maxPathSize;
-        public int pathNodeSize;
-
-        public PathRequestQueryInfo pathRequestQueryInfo;
-
-        public struct PathRequestQueryInfo
-        {
-            public NavMeshLocation fromLocation;
-            public NavMeshLocation toLocation;
-
-            public bool inProgress;
-        }
     }
 }
