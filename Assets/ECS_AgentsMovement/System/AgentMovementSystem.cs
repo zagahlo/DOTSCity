@@ -7,14 +7,13 @@ using UnityEngine;
 
 namespace ECS_AgentsMovement.System
 {
-    public partial class AgentMovementSystem : SystemBase
+    public partial struct AgentMovementSystem : ISystem
     {
         private EntityQuery _eQuery;
 
-        protected override void OnCreate()
+        public void OnCreate(ref SystemState state)
         {
-            // Query explícita: solo entidades que tengan TODO lo que el job necesita
-            _eQuery = GetEntityQuery(new EntityQueryDesc
+            _eQuery = state.GetEntityQuery(new EntityQueryDesc
             {
                 All = new[]
                 {
@@ -23,16 +22,18 @@ namespace ECS_AgentsMovement.System
                     ComponentType.ReadWrite<AgentsWaypointsBuffer>(),
                 }
             });
+            
+            state.RequireForUpdate(_eQuery);
         }
 
-        protected override void OnUpdate()
+        public void OnUpdate(ref SystemState state)
         {
             var job = new AgentMovementJob
             {
                 DeltaTime = SystemAPI.Time.DeltaTime
             };
 
-            Dependency = job.ScheduleParallel(_eQuery,Dependency);
+            state.Dependency = job.ScheduleParallel(_eQuery, state.Dependency);
         }
         
         [BurstCompile]
