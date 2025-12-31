@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace ECS_AgentsMovement.Data
 {
-    [CreateAssetMenu(menuName = "ScriptableObject/Map/NavMeshAgentConfig")]
+    [CreateAssetMenu(menuName = "ScriptableObject/Agent Configuration")]
     public class AgentConfiguration : ScriptableObject
     {
         public float movementSpeed;

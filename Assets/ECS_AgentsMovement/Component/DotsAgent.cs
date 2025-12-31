@@ -7,7 +7,7 @@ using Unity.Transforms;
 
 namespace ECS_AgentsMovement.Component
 {
-    public class DotsNavMeshAgent : MonoBehaviour
+    public class DotsAgent : MonoBehaviour
     {
         public Transform waypointsEditorContainer;
         public List<Vector3> waypoints;

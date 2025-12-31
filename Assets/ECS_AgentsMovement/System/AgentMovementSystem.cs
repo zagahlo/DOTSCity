@@ -52,7 +52,6 @@ namespace ECS_AgentsMovement.System
                 // move the agent
                 trans.Position += normalizedDirection * agentData.movementSpeed * DeltaTime;
 
-                LogConsole(agentData, "agentData.waypointsBufferIndex"+agentData.waypointsBufferIndex);
                 // if the distance between agent currentPosition and the nextWaypoint is less than min required configured
                 if (math.distance(trans.Position, awb[agentData.waypointsBufferIndex].agentWaypoint) <= agentData.minDistanceReq)
                 {
@@ -61,12 +60,12 @@ namespace ECS_AgentsMovement.System
                         if (agentData.waypointsBufferIndex == awb.Length - 1)
                         {
                             agentData.waypointsBufferIndex = 0;
-                            LogConsole(agentData, $"waypointsBufferIndex set 0");
+                            LogConsole(agentData, "waypointsBufferIndex set 0");
                         }
                         else
                         {
                             agentData.waypointsBufferIndex++;
-                            LogConsole(agentData, $"waypointsBufferIndex++ {agentData.waypointsBufferIndex}");
+                            LogConsole(agentData, "waypointsBufferIndex++");
                             if (agentData.waypointsBufferIndex == awb.Length - 1)
                             {
                                 if (agentData.reverseAtEnd)
@@ -77,7 +76,7 @@ namespace ECS_AgentsMovement.System
                     else
                     {
                         agentData.waypointsBufferIndex--;
-                        LogConsole(agentData, $"waypointsBufferIndex-- {agentData.waypointsBufferIndex}");
+                        LogConsole(agentData, "waypointsBufferIndex--");
 
                         if (agentData.waypointsBufferIndex == 0)
                             agentData.reversing = false;
@@ -90,6 +89,7 @@ namespace ECS_AgentsMovement.System
             }
         }
         
+        [BurstDiscard]
         private static void LogConsole(AgentObjectComponentData agentData, string message)
         {
             if(agentData.logger)
