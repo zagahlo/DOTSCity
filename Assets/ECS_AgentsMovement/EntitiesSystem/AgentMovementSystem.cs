@@ -1,11 +1,10 @@
-﻿using ECS_AgentsMovement.Component;
-using Unity.Burst;
+﻿using Unity.Burst;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.Transforms;
 using UnityEngine;
 
-namespace ECS_AgentsMovement.System
+namespace ECS_AgentsMovement.EntitiesSystem
 {
     public partial struct AgentMovementSystem : ISystem
     {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using ECS_AgentsMovement.Data;
-using ECS_AgentsMovement.System;
+using ECS_AgentsMovement.EntitiesSystem;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Transforms;
@@ -28,9 +28,6 @@ namespace ECS_AgentsMovement.Component
 
             _entityManager = World.DefaultGameObjectInjectionWorld.EntityManager;
             _entity = _entityManager.CreateEntity();
-#if UNITY_EDITOR
-            _entityManager.SetName(_entity, "Pedestrian_" + transform.position.x + "x" + transform.position.z);
-#endif
         }
 
         private void OnEnable()

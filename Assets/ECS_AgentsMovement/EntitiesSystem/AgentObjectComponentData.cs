@@ -1,6 +1,6 @@
 ﻿using Unity.Entities;
 
-namespace ECS_AgentsMovement.Component
+namespace ECS_AgentsMovement.EntitiesSystem
 {
     public struct AgentObjectComponentData : IComponentData
     {
